@@ -17,7 +17,7 @@ public class Pipe extends Thread {
         while (canRead)
         {
             try {
-                IOUtils.copy();
+//                IOUtils.copy();
 
             }
             catch (Exception ex)

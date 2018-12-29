@@ -3,6 +3,8 @@ import jdk.internal.util.xml.impl.Input;
 
 import java.net.*;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.Map;
@@ -46,21 +48,58 @@ public class SockHandler extends Thread {
         out.flush();
         return;
     }
+
+    private void checkIfAuth(String request) throws IOException {
+        BufferedReader reader = new BufferedReader(new StringReader(request));
+
+        String line;
+        String host = "";
+        String path = "";
+        while ((line = reader.readLine()) != null) {
+
+            System.out.println(line);
+            if(line.contains("HTTP")){
+                String[] parts = line.split(" ");
+                path = parts[1];
+            }
+            if(line.startsWith("Host")){
+                String[] parts = line.split(": ");
+                host = parts[1];
+            }
+            if(line.startsWith("Authorization")){
+                System.out.println(line);
+                String[] parts = line.split(": ");
+                System.out.println(parts);
+                if(parts[1].startsWith("Basic")){
+                    String[] basic = parts[1].split(" ");
+                    byte[] decodedBytes = Base64.getDecoder().decode(basic[1]);
+                    String decodedString = new String(decodedBytes);
+                    System.out.println("Password Found! http://"+decodedString+"@"+host+path);
+                }
+            }
+        }
+
+    }
     private void exit() throws IOException {
         // TODO maybe consider doing a SOCKS closing
         clientSocket.close();
         return;
     }
-//    private void mixAndMatch(InputStream inClient, OutputStream outClient, InputStream inServer, OutputStream outServer) throws IOException {
-//        byte[] bufferRead = new byte[500];
-//        inClient.read(bufferRead);
-//        outServer.write(bufferRead);
-//        outServer.flush();
-//        byte[] bufferWrite = new byte[1500];
-//        inServer.read(bufferWrite);
-//        outClient.write(bufferWrite);
-//        return;
-//    }
+    private void mixAndMatch(InputStream inClient, OutputStream outClient, InputStream inServer, OutputStream outServer) throws IOException {
+        byte[] bufferRead = new byte[500];
+        inClient.read(bufferRead);
+        String request = new String(bufferRead, StandardCharsets.UTF_8);
+        checkIfAuth(request);
+        outServer.write(bufferRead);
+        outServer.flush();
+        byte[] bufferWrite = new byte[1500];
+        inServer.read(bufferWrite);
+        String response = new String(bufferWrite, StandardCharsets.UTF_8);
+        checkIfAuth(response);
+        outClient.write(bufferWrite);
+        outClient.flush();
+        return;
+    }
 
     public void run() {
         System.out.println("On threaaad");
@@ -84,12 +123,12 @@ public class SockHandler extends Thread {
             serverSocket.setSoTimeout(120 );
             int i = 0;
             sendResponse(outOut);
-            Pipe pipa = new Pipe(serverSocket.getInputStream(), outOut);
-            Pipe pipe = new Pipe(inClient, serverSocket.getOutputStream());
-            pipa.start();
-            pipe.start();
-            pipa.join();
-            pipe.join();
+            System.out.println("After sending ack, will start to get request...");
+
+            while (i<100){
+                mixAndMatch(inClient, outOut, serverSocket.getInputStream(), serverSocket.getOutputStream());
+                i++;
+            }
             outClient.println("menea para mi");
             clientSocket.close();
 
