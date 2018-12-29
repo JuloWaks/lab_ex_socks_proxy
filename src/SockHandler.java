@@ -51,17 +51,16 @@ public class SockHandler extends Thread {
         clientSocket.close();
         return;
     }
-    private void mixAndMatch(InputStream inClient, OutputStream outClient, InputStream inServer, OutputStream outServer) throws IOException {
-        byte[] bufferRead = new byte[500];
-        inClient.read(bufferRead);
-        outServer.write(bufferRead);
-        outServer.flush();
-        byte[] bufferWrite = new byte[1500];
-        inServer.read(bufferWrite);
-        outClient.write(bufferWrite);
-        outClient.flush();
-        return;
-    }
+//    private void mixAndMatch(InputStream inClient, OutputStream outClient, InputStream inServer, OutputStream outServer) throws IOException {
+//        byte[] bufferRead = new byte[500];
+//        inClient.read(bufferRead);
+//        outServer.write(bufferRead);
+//        outServer.flush();
+//        byte[] bufferWrite = new byte[1500];
+//        inServer.read(bufferWrite);
+//        outClient.write(bufferWrite);
+//        return;
+//    }
 
     public void run() {
         System.out.println("On threaaad");
@@ -85,10 +84,12 @@ public class SockHandler extends Thread {
             serverSocket.setSoTimeout(120 );
             int i = 0;
             sendResponse(outOut);
-            while (i<100){
-                mixAndMatch(inClient, outOut, serverSocket.getInputStream(), serverSocket.getOutputStream());
-                i++;
-            }
+            Pipe pipa = new Pipe(serverSocket.getInputStream(), outOut);
+            Pipe pipe = new Pipe(inClient, serverSocket.getOutputStream());
+            pipa.start();
+            pipe.start();
+            pipa.join();
+            pipe.join();
             outClient.println("menea para mi");
             clientSocket.close();
 
