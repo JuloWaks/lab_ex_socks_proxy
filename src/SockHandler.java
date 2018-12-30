@@ -21,7 +21,20 @@ public class SockHandler extends Thread {
         super("SockHandler");
         this.clientSocket = socket; // TOOD set timeout
     }
+    private String getIpAddresFromDomain()
+    {
+        int startingPoint = 9;
+        int i = startingPoint;
+        byte value = head[i];
+        while(value != 0)
+        {
+            i++;
+            value = head[i];
+        }
+        String domain = new String(head, startingPoint, i-startingPoint );
+        return domain;
 
+    }
     private Map<String,Object> headerParsing(SocketChannel sock) throws UnknownHostException {
         Map<String,Object> headerValues = new HashMap<String, Object>();
 
@@ -166,12 +179,15 @@ public class SockHandler extends Thread {
             }
 //            System.out.println("Command: " + headerValues.get("COMMAND"));
             String ipAddress = ((InetAddress) headerValues.get("IP")).getHostAddress();
+            if(ipAddress.contains("0.0.0.")){ // FIXME should be a regular expression checking for 0.0.0.x with x > 0
+                ipAddress = getIpAddresFromDomain();
+            }
             this.serverSocket = SocketChannel.open();
             serverSocket.socket().setSoTimeout(120);
             serverSocket.connect(new InetSocketAddress(ipAddress, (int)headerValues.get("PORT")));
-             SocketAddress clientAddress = clientSocket.socket().getLocalSocketAddress();
+             InetAddress clientAddress = clientSocket.socket().getInetAddress();
              SocketAddress serverAddress = serverSocket.socket().getRemoteSocketAddress();
-             System.out.println("Succesfull connection from " + clientAddress.toString().replace("/", "") + " to " + serverAddress.toString().replace("/", "") );
+             System.out.println("Succesfull connection from " + clientAddress.toString().replace("/", "") + " to " + serverAddress.toString().replace("/", "") ); // TODO fix, this print doesnt work with socks 4a
             sendConnectedResponse(clientSocket);
 
             mixAndMatch(clientSocket,serverSocket);
