@@ -1,5 +1,4 @@
-import com.sun.tools.internal.ws.wsdl.document.Output;
-import jdk.internal.util.xml.impl.Input;
+
 
 import java.net.*;
 import java.io.*;
@@ -46,10 +45,15 @@ public class SockHandler extends Thread {
         try {
            response = sock.read(buf);
         } catch (IOException e) {
-            e.printStackTrace();
+
+            e.printStackTrace(); // TODO move this to print to System.err
+            // TODO replace for failing and sending reject message
+
         }
         buf.flip();
         headers = buf.array();
+
+        // TODO cover case that they send trash, i.e not a SOCKS reaquest
         headerValues.put("VERSION", (int) headers[0]);
         headerValues.put("COMMAND", headers[1]);
         headerValues.put("PORT", (headers[3] & 0xFF) | ((headers[2] & 0xFF)<< 8));
@@ -57,6 +61,7 @@ public class SockHandler extends Thread {
         headerValues.put("HEAD", headers);
         head = headers;
 
+        // TODO read until there's a 0
         return headerValues;
     }
     private void sendConnectedResponse(SocketChannel out) throws IOException {
@@ -80,7 +85,7 @@ public class SockHandler extends Thread {
     private void checkIfAuth(String request) throws IOException {
         BufferedReader reader = new BufferedReader(new StringReader(request));
         String line; String host = ""; String path = "";
-
+        // TODO maybe make this code prettier
         while ((line = reader.readLine()) != null) {
             if(line.contains("HTTP")){
                 String[] parts = line.split(" ");
@@ -139,7 +144,7 @@ public class SockHandler extends Thread {
         } catch (ClosedSelectorException | IOException ex) {
 
             // selector was closed while being used
-            ex.printStackTrace();
+            ex.printStackTrace(); // check this exception print to err TODO
             return false;
         }
         return true;
@@ -168,7 +173,6 @@ public class SockHandler extends Thread {
     public void run() {
          try {
 
-            String inputLine, outputLine;
             this.headerValues = headerParsing(clientSocket);
             if((int) headerValues.get("VERSION") != 4)
             {
@@ -177,6 +181,7 @@ public class SockHandler extends Thread {
                 this.exit();
                 return;
             }
+            // TODO check that header COMMAND is 1
 //            System.out.println("Command: " + headerValues.get("COMMAND"));
             String ipAddress = ((InetAddress) headerValues.get("IP")).getHostAddress();
             if(ipAddress.contains("0.0.0.")){ // FIXME should be a regular expression checking for 0.0.0.x with x > 0
@@ -187,7 +192,7 @@ public class SockHandler extends Thread {
             serverSocket.connect(new InetSocketAddress(ipAddress, (int)headerValues.get("PORT")));
              InetAddress clientAddress = clientSocket.socket().getInetAddress();
              SocketAddress serverAddress = serverSocket.socket().getRemoteSocketAddress();
-             System.out.println("Succesfull connection from " + clientAddress.toString().replace("/", "") + " to " + serverAddress.toString().replace("/", "") ); // TODO fix, this print doesnt work with socks 4a
+             System.err.println("Succesfull connection from " + clientAddress.toString().replace("/", "") + " to " + serverAddress.toString().replace("/", "") ); // TODO fix, this print doesnt work with socks 4a
             sendConnectedResponse(clientSocket);
 
             mixAndMatch(clientSocket,serverSocket);
