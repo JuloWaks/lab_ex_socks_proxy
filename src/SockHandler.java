@@ -1,5 +1,3 @@
-
-
 import java.net.*;
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -53,7 +51,6 @@ public class SockHandler extends Thread {
         buf.flip();
         headers = buf.array();
 
-        // TODO cover case that they send trash, i.e not a SOCKS reaquest
         headerValues.put("VERSION", (int) headers[0]);
         headerValues.put("COMMAND", headers[1]);
         headerValues.put("PORT", (headers[3] & 0xFF) | ((headers[2] & 0xFF)<< 8));
@@ -61,7 +58,6 @@ public class SockHandler extends Thread {
         headerValues.put("HEAD", headers);
         head = headers;
 
-        // TODO read until there's a 0
         return headerValues;
     }
     private void sendConnectedResponse(SocketChannel out) throws IOException {
@@ -144,7 +140,7 @@ public class SockHandler extends Thread {
         } catch (ClosedSelectorException | IOException ex) {
 
             // selector was closed while being used
-            ex.printStackTrace(); // check this exception print to err TODO
+            ex.printStackTrace();
             return false;
         }
         return true;
@@ -174,15 +170,20 @@ public class SockHandler extends Thread {
          try {
 
             this.headerValues = headerParsing(clientSocket);
-            if((int) headerValues.get("VERSION") != 4)
+            if(((int) headerValues.get("VERSION") != 4) )
             {
                 System.err.println("Connection error: while parsing request: Unsupported SOCKS protocol version (got "+  headerValues.get("VERSION") +")");
                 sendRejectedResponse(clientSocket);
                 this.exit();
                 return;
             }
-            // TODO check that header COMMAND is 1
-//            System.out.println("Command: " + headerValues.get("COMMAND"));
+             if(((int) headerValues.get("COMMAND") != 1) )
+             {
+                 System.err.println("Connection error: while parsing request: Unsupported SOCKS Command version (got "+  headerValues.get("COMMAND") +")");
+                 sendRejectedResponse(clientSocket);
+                 this.exit();
+                 return;
+             }
             String ipAddress = ((InetAddress) headerValues.get("IP")).getHostAddress();
             if(ipAddress.contains("0.0.0.")){ // FIXME should be a regular expression checking for 0.0.0.x with x > 0
                 ipAddress = getIpAddresFromDomain();
