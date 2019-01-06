@@ -1,0 +1,8 @@
+Students: Julian Waksberg(000801926) Roy Shafir(302234190)
+SocksPy.java : This class is the main class, runs the server and accepts up to 20 connections. Takes care of distributing the accepted connection to threads that run SockHandler class
+SockHandler.java: This class does all the processing for the Socks protocol and does the proxying of the data.
+
+Architecture:
+The architecture is a combination of Threads and NIO.
+Basically every thread does the necessary validation and then joins the channels such that they will write and read to each other asynchronously.
+Basic setting opposed selector generates that writing is only available when reading is ready as well.
